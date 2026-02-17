@@ -1,6 +1,9 @@
 name: Deploy to Local IIS
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch: 
 
 jobs:
@@ -51,3 +54,4 @@ jobs:
         
 
         Write-Host "SUCCESS! Deployed to http://localhost:8080"
+
