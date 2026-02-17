@@ -1,0 +1,52 @@
+name: Deploy to Local IIS
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Publish .NET App
+      run: dotnet publish -c Release -o ./publish_output
+
+    - name: Deploy to IIS Folder
+      run: |
+        # Define the destination folder (Match this to your IIS Site Physical Path)
+        $dest = "C:\inetpub\MyLocalWebApp"
+        $siteName = "MyLocalWebApp"
+
+        Write-Host "Deploying to $dest..."
+
+        # Stop the Site (Prevents 'File in Use' errors)
+        # We use try/catch in case the site is already stopped or doesn't exist yet
+        try {
+            Stop-WebSite -Name $siteName -ErrorAction Stop
+            Write-Host "Site stopped."
+        } catch {
+            Write-Host "Site was not running or could not be stopped. Proceeding..."
+        }
+
+        # Clear old files (Optional but recommended for a clean deploy)
+        # We use -Force to delete read-only files if any
+        if (Test-Path $dest) {
+            Remove-Item "$dest\*" -Recurse -Force -ErrorAction SilentlyContinue
+        } else {
+            New-Item -ItemType Directory -Force -Path $dest
+        }
+
+        # Copy the new build files
+        Copy-Item -Path ".\publish_output\*" -Destination $dest -Recurse -Force
+
+        # Start the Site
+        Start-WebSite -Name $siteName
+        
+        Write-Host "SUCCESS! Deployed to http://localhost:8080"
